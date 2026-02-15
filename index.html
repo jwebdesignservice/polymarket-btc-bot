@@ -259,6 +259,10 @@
         </div>
         
         <div class="stats-grid">
+            <div class="stat-card" style="border-color: var(--accent); background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(34, 197, 94, 0.1));">
+                <div class="stat-label">💰 Overall Balance</div>
+                <div class="stat-value positive" id="overall-balance" style="font-size: 2rem;">$100.00</div>
+            </div>
             <div class="stat-card">
                 <div class="stat-label">Total P&L</div>
                 <div class="stat-value positive" id="total-pnl">+$0.00</div>
@@ -353,6 +357,7 @@
         // Demo data for public view
         const demoData = {
             stats: {
+                starting_balance: 100.00,
                 total_profit: 15.50,
                 wins: 8,
                 losses: 3,
@@ -420,6 +425,11 @@
         
         function updateDisplay() {
             const { stats, position, trades } = demoData;
+            
+            // Update overall balance
+            const balance = stats.starting_balance + stats.total_profit;
+            document.getElementById('overall-balance').textContent = `$${balance.toFixed(2)}`;
+            document.getElementById('overall-balance').className = `stat-value ${balance >= stats.starting_balance ? 'positive' : 'negative'}`;
             
             // Update stats
             const pnl = stats.total_profit;
