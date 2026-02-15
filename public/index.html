@@ -433,18 +433,32 @@
                 document.getElementById('pos-shares').textContent = position.shares;
                 document.getElementById('pos-cost').textContent = `$${position.cost.toFixed(2)}`;
                 
-                // Position P&L (estimated)
-                const estPnl = position.side === 'UP' ? 
-                    (position.shares - position.cost) : 
-                    (position.shares - position.cost);
-                document.getElementById('pos-pnl').textContent = `~$${Math.abs(estPnl).toFixed(2)}`;
-                document.getElementById('pos-pnl').className = `position-value`;
-                document.getElementById('pos-status').textContent = '⏳ Pending';
-                document.getElementById('pos-time').textContent = '--:--';
+                // Live P&L from data
+                const livePnl = position.live_pnl || 0;
+                document.getElementById('pos-pnl').textContent = `${livePnl >= 0 ? '+' : ''}$${livePnl.toFixed(2)}`;
+                document.getElementById('pos-pnl').className = `position-value ${livePnl >= 0 ? 'positive' : 'negative'}`;
                 
-                // Update chart probability (estimate based on side)
-                const prob = position.side === 'UP' ? 55 : 45;
-                document.getElementById('chart-prob').textContent = `${prob}%`;
+                // Status from live data
+                const winning = position.winning;
+                document.getElementById('pos-status').textContent = winning === true ? '📈 Winning' : winning === false ? '📉 Losing' : '⏳ Pending';
+                
+                // Time remaining
+                const timeLeft = position.time_remaining || 0;
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                document.getElementById('pos-time').textContent = timeLeft > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : '--:--';
+                
+                // Update chart probability from live data
+                const prob = position.up_probability || 50;
+                document.getElementById('chart-prob').textContent = `${prob.toFixed(0)}%`;
+                
+                // Update chart with new data point
+                if (probChart && prob) {
+                    chartData.shift();
+                    chartData.push(prob);
+                    probChart.data.datasets[0].data = chartData;
+                    probChart.update('none');
+                }
             } else {
                 document.getElementById('pos-side').textContent = '-';
                 document.getElementById('pos-shares').textContent = '0';

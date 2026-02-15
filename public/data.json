@@ -1,13 +1,14 @@
 {
-  "updated": "2026-02-15T15:23:20.914807",
+  "updated": "2026-02-15T15:32:09.350822",
+  "timestamp": 1771169529.350846,
   "stats": {
     "wins": 14,
-    "losses": 9,
-    "total_profit": 35.8,
-    "rounds_traded": 23,
-    "current_streak": 2,
+    "losses": 11,
+    "total_profit": 33.0,
+    "rounds_traded": 25,
+    "current_streak": -2,
     "starting_balance": 100.0,
-    "overall_balance": 135.8
+    "overall_balance": 133.0
   },
   "position": {
     "has_position": true,
@@ -15,9 +16,30 @@
     "shares": 2,
     "cost": 1.4,
     "entry_price": 0.7,
-    "target_price": 69016.24
+    "target_price": 68942.01,
+    "btc_price": 68965.61,
+    "winning": true,
+    "live_pnl": 0.6,
+    "up_probability": 52.4,
+    "down_probability": 47.6,
+    "time_remaining": 167,
+    "potential_payout": 2
   },
   "trades": [
+    {
+      "time": "03:29 PM",
+      "side": "UP",
+      "invested": 1.4,
+      "profit": -1.4,
+      "won": false
+    },
+    {
+      "time": "03:24 PM",
+      "side": "UP",
+      "invested": 1.4,
+      "profit": -1.4,
+      "won": false
+    },
     {
       "time": "03:19 PM",
       "side": "DOWN",
@@ -73,20 +95,6 @@
       "invested": 1.0,
       "profit": 1.0,
       "won": true
-    },
-    {
-      "time": "01:47 PM",
-      "side": "DOWN",
-      "invested": 1.0,
-      "profit": -1.0,
-      "won": false
-    },
-    {
-      "time": "01:42 PM",
-      "side": "DOWN",
-      "invested": 1.0,
-      "profit": -1.0,
-      "won": false
     }
   ]
 }

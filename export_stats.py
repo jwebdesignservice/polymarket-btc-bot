@@ -7,7 +7,9 @@ import os
 from datetime import datetime
 
 TRADES_FILE = "logs/trades.jsonl"
+STATE_FILE = "position_state.json"
 OUTPUT_FILE = "public/data.json"
+ROOT_OUTPUT = "data.json"
 STARTING_BALANCE = 100.0
 
 def load_trades():
@@ -17,8 +19,21 @@ def load_trades():
         with open(TRADES_FILE, 'r') as f:
             for line in f:
                 if line.strip():
-                    trades.append(json.loads(line))
+                    try:
+                        trades.append(json.loads(line))
+                    except:
+                        pass
     return trades
+
+def load_live_state():
+    """Load live state from position_state.json"""
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
 
 def calculate_stats(trades):
     """Calculate trading statistics"""
@@ -53,8 +68,28 @@ def calculate_stats(trades):
     }
 
 def get_current_position(trades):
-    """Get the current open position if any"""
-    # Find the last ENTER that doesn't have a corresponding CLOSE
+    """Get the current open position with live data"""
+    # First try to get live state
+    live = load_live_state()
+    
+    if live.get('has_position'):
+        return {
+            'has_position': True,
+            'side': live.get('side', 'UP'),
+            'shares': live.get('shares', 0),
+            'cost': round(live.get('cost', 0), 2),
+            'entry_price': live.get('entry_price', 0.5),
+            'target_price': live.get('target_price', 0),
+            'btc_price': live.get('btc_price', 0),
+            'winning': live.get('winning', False),
+            'live_pnl': round(live.get('live_pnl', 0), 2),
+            'up_probability': round(live.get('up_probability', 50), 1),
+            'down_probability': round(live.get('down_probability', 50), 1),
+            'time_remaining': int(live.get('time_remaining', 0)),
+            'potential_payout': live.get('potential_payout', 0)
+        }
+    
+    # Fallback to trades file
     open_trades = [t for t in trades if t.get('action') == 'ENTER' and t.get('status') == 'open']
     
     if open_trades:
@@ -63,9 +98,11 @@ def get_current_position(trades):
             'has_position': True,
             'side': latest.get('side', 'UP'),
             'shares': latest.get('shares', 0),
-            'cost': latest.get('cost', 0),
+            'cost': round(latest.get('cost', 0), 2),
             'entry_price': latest.get('entry_price', 0.5),
-            'target_price': latest.get('target_price', 0)
+            'target_price': latest.get('target_price', 0),
+            'winning': None,
+            'time_remaining': 0
         }
     
     return {'has_position': False}
@@ -96,6 +133,7 @@ def export_data():
     
     data = {
         'updated': datetime.now().isoformat(),
+        'timestamp': datetime.now().timestamp(),
         'stats': calculate_stats(trades),
         'position': get_current_position(trades),
         'trades': format_recent_trades(trades)
@@ -104,11 +142,16 @@ def export_data():
     # Ensure directory exists
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
     
+    # Write to both locations
     with open(OUTPUT_FILE, 'w') as f:
         json.dump(data, f, indent=2)
     
-    print(f"Exported stats to {OUTPUT_FILE}")
+    with open(ROOT_OUTPUT, 'w') as f:
+        json.dump(data, f, indent=2)
+    
+    print(f"Exported stats to {OUTPUT_FILE} and {ROOT_OUTPUT}")
     print(f"Stats: {data['stats']}")
+    print(f"Position: {data['position']}")
     return data
 
 if __name__ == '__main__':
