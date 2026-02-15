@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Polymarket Bot - Live Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -48,14 +49,20 @@
             -webkit-text-fill-color: transparent;
         }
         
-        .view-badge {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #000;
+        .live-badge {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #fff;
             padding: 0.4rem 0.8rem;
             border-radius: 20px;
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: uppercase;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         
         .header-right { display: flex; gap: 1rem; align-items: center; }
@@ -76,17 +83,17 @@
             height: 8px;
             background: var(--green);
             border-radius: 50%;
-            animation: pulse 2s infinite;
+            animation: blink 1s infinite;
         }
         
-        @keyframes pulse {
+        @keyframes blink {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.3; }
         }
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
@@ -99,8 +106,13 @@
             text-align: center;
         }
         
+        .stat-card.highlight {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(34, 197, 94, 0.1));
+        }
+        
         .stat-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -133,76 +145,9 @@
             border-bottom: 1px solid var(--border);
         }
         
-        .chart-container {
-            background: #0d1421;
-            border: 1px solid #1e3a5f;
-            border-radius: 8px;
-            padding: 1rem;
-            height: 300px;
-            position: relative;
-        }
-        
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-        }
-        
-        .chart-title { color: #60a5fa; font-weight: 600; }
-        .chart-value { color: #fbbf24; font-size: 1.2rem; font-weight: 700; }
-        
-        .trades-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .trades-table th {
-            text-align: left;
-            padding: 0.75rem;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .trades-table td {
-            padding: 1rem 0.75rem;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .trades-table tr:last-child td { border-bottom: none; }
-        
-        .side-up { color: var(--green); font-weight: 600; }
-        .side-down { color: var(--red); font-weight: 600; }
-        
-        .profit-positive { color: var(--green); font-weight: 700; }
-        .profit-negative { color: var(--red); font-weight: 700; }
-        
-        .result-won { color: var(--green); }
-        .result-lost { color: var(--red); }
-        
-        .info-banner {
-            background: linear-gradient(135deg, #1e1b4b, #312e81);
-            border: 1px solid #4338ca;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
-        
-        .info-banner h3 {
-            color: #a5b4fc;
-            margin-bottom: 0.5rem;
-        }
-        
-        .info-banner p {
-            color: #9ca3af;
-            font-size: 0.9rem;
-        }
-        
         .live-position {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
             gap: 1rem;
         }
         
@@ -225,6 +170,52 @@
             font-weight: 600;
         }
         
+        .position-value.up { color: var(--green); }
+        .position-value.down { color: var(--red); }
+        
+        .trades-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .trades-table th {
+            text-align: left;
+            padding: 0.75rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .trades-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        
+        .trades-table tr:last-child td { border-bottom: none; }
+        
+        .side-up { color: var(--green); font-weight: 600; }
+        .side-down { color: var(--red); font-weight: 600; }
+        
+        .profit-positive { color: var(--green); font-weight: 700; }
+        .profit-negative { color: var(--red); font-weight: 700; }
+        
+        .result-won { color: var(--green); }
+        .result-lost { color: var(--red); }
+        
+        .info-banner {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            border: 1px solid #4338ca;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .info-banner h3 { color: #a5b4fc; margin-bottom: 0.5rem; }
+        .info-banner p { color: #9ca3af; font-size: 0.9rem; }
+        
         .footer {
             text-align: center;
             padding: 2rem;
@@ -232,10 +223,14 @@
             font-size: 0.85rem;
         }
         
-        .footer a {
-            color: var(--accent);
-            text-decoration: none;
+        .footer a { color: var(--accent); text-decoration: none; }
+        
+        .connection-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
         }
+        .connection-status.connected { color: var(--green); }
+        .connection-status.disconnected { color: var(--red); }
     </style>
 </head>
 <body>
@@ -243,9 +238,10 @@
         <header>
             <div class="header-left">
                 <h1>🤖 POLYMARKET BOT</h1>
-                <span class="view-badge">👁️ View Only</span>
+                <span class="live-badge">🔴 LIVE</span>
             </div>
             <div class="header-right">
+                <span class="connection-status" id="connection-status">Connecting...</span>
                 <div class="status-badge">
                     <span class="status-dot"></span>
                     <span id="status-text">LIVE</span>
@@ -254,14 +250,14 @@
         </header>
         
         <div class="info-banner">
-            <h3>📊 Live Trading Dashboard</h3>
-            <p>This bot trades BTC 5-minute Up/Down markets on Polymarket using momentum signals.</p>
+            <h3>📊 Real-Time Trading Dashboard</h3>
+            <p>Live data from Supabase • Updates every 5 seconds • BTC 5-minute Up/Down markets</p>
         </div>
         
         <div class="stats-grid">
-            <div class="stat-card" style="border-color: var(--accent); background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(34, 197, 94, 0.1));">
-                <div class="stat-label">💰 Overall Balance</div>
-                <div class="stat-value positive" id="overall-balance" style="font-size: 2rem;">$100.00</div>
+            <div class="stat-card highlight">
+                <div class="stat-label">💰 Balance</div>
+                <div class="stat-value positive" id="balance">$100.00</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Total P&L</div>
@@ -272,11 +268,11 @@
                 <div class="stat-value" id="win-rate">0%</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Total Trades</div>
+                <div class="stat-label">Trades</div>
                 <div class="stat-value" id="total-trades">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Current Streak</div>
+                <div class="stat-label">Streak</div>
                 <div class="stat-value" id="streak">0</div>
             </div>
         </div>
@@ -298,27 +294,16 @@
                 </div>
                 <div class="position-item">
                     <div class="position-label">Live P&L</div>
-                    <div class="position-value positive" id="pos-pnl">$0.00</div>
+                    <div class="position-value" id="pos-pnl">$0.00</div>
                 </div>
                 <div class="position-item">
                     <div class="position-label">Status</div>
-                    <div class="position-value" id="pos-status">Waiting</div>
+                    <div class="position-value" id="pos-status">-</div>
                 </div>
                 <div class="position-item">
                     <div class="position-label">Time Left</div>
-                    <div class="position-value" id="pos-time">0:00</div>
+                    <div class="position-value" id="pos-time">--:--</div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>📊 Probability Chart</h2>
-            <div class="chart-container">
-                <div class="chart-header">
-                    <span class="chart-title">UP Probability</span>
-                    <span class="chart-value" id="chart-prob">50%</span>
-                </div>
-                <canvas id="prob-chart"></canvas>
             </div>
         </div>
         
@@ -347,120 +332,66 @@
         <div class="footer">
             <p>Built with ❤️ | Polymarket BTC Up/Down Bot</p>
             <p style="margin-top: 0.5rem;">
-                <a href="https://polymarket.com" target="_blank">Polymarket</a> • 
-                <a href="https://github.com" target="_blank">GitHub</a>
+                <a href="https://polymarket.com" target="_blank">Polymarket</a>
             </p>
         </div>
     </div>
     
     <script>
-        // Live data from JSON file
-        let liveData = null;
-        let probChart;
-        let chartData = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50];
+        // Supabase config
+        const SUPABASE_URL = 'https://knmiigfwovdxmeyxexqq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtubWlpZ2Z3b3ZkeG1leXhleHFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExMzI4NTQsImV4cCI6MjA4NjcwODg1NH0.uOZAykf9Ax878UCsdXJIiSw3n7MQ9V0UQGTrJRgn_1c';
         
-        async function fetchData() {
-            try {
-                const response = await fetch('data.json?' + Date.now());
-                liveData = await response.json();
-                updateDisplay();
-            } catch (e) {
-                console.log('Could not fetch live data, using cached');
-            }
-        }
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        function initChart() {
-            const ctx = document.getElementById('prob-chart').getContext('2d');
-            probChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['', '', '', '', '', '', '', '', '', ''],
-                    datasets: [{
-                        data: chartData,
-                        borderColor: '#60a5fa',
-                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false },
-                        y: {
-                            position: 'right',
-                            min: 0,
-                            max: 100,
-                            grid: { color: 'rgba(30, 58, 95, 0.5)' },
-                            ticks: { 
-                                color: '#9ca3af',
-                                callback: v => v + '%'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function updateDisplay() {
-            if (!liveData) return;
+        function updateDisplay(data) {
+            if (!data) return;
             
-            const { stats, position, trades } = liveData;
+            const stats = data.stats || {};
+            const position = data.position || {};
+            const trades = data.trades || [];
+            const balance = data.balance || 100;
             
-            // Update overall balance
-            const balance = stats.overall_balance || (stats.starting_balance + stats.total_profit);
-            document.getElementById('overall-balance').textContent = `$${balance.toFixed(2)}`;
-            document.getElementById('overall-balance').className = `stat-value ${balance >= stats.starting_balance ? 'positive' : 'negative'}`;
+            // Balance
+            document.getElementById('balance').textContent = `$${balance.toFixed(2)}`;
+            document.getElementById('balance').className = `stat-value ${balance >= 100 ? 'positive' : 'negative'}`;
             
-            // Update stats
-            const pnl = stats.total_profit;
+            // P&L
+            const pnl = stats.total_profit || 0;
             document.getElementById('total-pnl').textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
             document.getElementById('total-pnl').className = `stat-value ${pnl >= 0 ? 'positive' : 'negative'}`;
             
+            // Win rate
             const winRate = stats.rounds_traded > 0 ? (stats.wins / stats.rounds_traded * 100) : 0;
             document.getElementById('win-rate').textContent = `${winRate.toFixed(0)}%`;
-            document.getElementById('total-trades').textContent = stats.rounds_traded;
-            document.getElementById('streak').textContent = stats.current_streak > 0 ? `+${stats.current_streak}` : stats.current_streak;
             
-            // Update position
-            if (position && position.has_position) {
+            // Trades count
+            document.getElementById('total-trades').textContent = stats.rounds_traded || 0;
+            
+            // Streak
+            const streak = stats.current_streak || 0;
+            document.getElementById('streak').textContent = streak > 0 ? `+${streak}` : streak;
+            
+            // Position
+            if (position.has_position) {
                 document.getElementById('pos-side').textContent = position.side;
-                document.getElementById('pos-side').className = `position-value ${position.side === 'UP' ? 'side-up' : 'side-down'}`;
+                document.getElementById('pos-side').className = `position-value ${position.side === 'UP' ? 'up' : 'down'}`;
                 document.getElementById('pos-shares').textContent = position.shares;
-                document.getElementById('pos-cost').textContent = `$${position.cost.toFixed(2)}`;
+                document.getElementById('pos-cost').textContent = `$${(position.cost || 0).toFixed(2)}`;
                 
-                // Live P&L from data
                 const livePnl = position.live_pnl || 0;
                 document.getElementById('pos-pnl').textContent = `${livePnl >= 0 ? '+' : ''}$${livePnl.toFixed(2)}`;
                 document.getElementById('pos-pnl').className = `position-value ${livePnl >= 0 ? 'positive' : 'negative'}`;
                 
-                // Status from live data
-                const winning = position.winning;
-                document.getElementById('pos-status').textContent = winning === true ? '📈 Winning' : winning === false ? '📉 Losing' : '⏳ Pending';
+                document.getElementById('pos-status').textContent = position.winning ? '📈 Winning' : '📉 Losing';
                 
-                // Time remaining
                 const timeLeft = position.time_remaining || 0;
                 const mins = Math.floor(timeLeft / 60);
                 const secs = timeLeft % 60;
-                document.getElementById('pos-time').textContent = timeLeft > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : '--:--';
-                
-                // Update chart probability from live data
-                const prob = position.up_probability || 50;
-                document.getElementById('chart-prob').textContent = `${prob.toFixed(0)}%`;
-                
-                // Update chart with new data point
-                if (probChart && prob) {
-                    chartData.shift();
-                    chartData.push(prob);
-                    probChart.data.datasets[0].data = chartData;
-                    probChart.update('none');
-                }
+                document.getElementById('pos-time').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
             } else {
                 document.getElementById('pos-side').textContent = '-';
+                document.getElementById('pos-side').className = 'position-value';
                 document.getElementById('pos-shares').textContent = '0';
                 document.getElementById('pos-cost').textContent = '$0.00';
                 document.getElementById('pos-pnl').textContent = '$0.00';
@@ -468,33 +399,69 @@
                 document.getElementById('pos-time').textContent = '--:--';
             }
             
-            // Update trades
-            if (trades && trades.length > 0) {
-                const tbody = document.getElementById('trades-body');
-                tbody.innerHTML = trades.map(t => `
+            // Trades table
+            if (trades.length > 0) {
+                document.getElementById('trades-body').innerHTML = trades.map(t => `
                     <tr>
                         <td>${t.time}</td>
                         <td class="${t.side === 'UP' ? 'side-up' : 'side-down'}">${t.side}</td>
-                        <td>$${t.invested.toFixed(2)}</td>
-                        <td class="${t.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${t.profit >= 0 ? '+' : ''}$${t.profit.toFixed(2)}</td>
+                        <td>$${(t.invested || 0).toFixed(2)}</td>
+                        <td class="${t.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${t.profit >= 0 ? '+' : ''}$${(t.profit || 0).toFixed(2)}</td>
                         <td class="${t.won ? 'result-won' : 'result-lost'}">${t.won ? '✅ Won' : '❌ Lost'}</td>
                     </tr>
                 `).join('');
             }
             
-            // Update last updated time
-            if (liveData.updated) {
-                const updated = new Date(liveData.updated);
-                document.getElementById('status-text').textContent = `Updated ${updated.toLocaleTimeString()}`;
+            // Update timestamp
+            document.getElementById('status-text').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        }
+        
+        async function fetchData() {
+            try {
+                const { data, error } = await supabase
+                    .from('dashboard')
+                    .select('*')
+                    .eq('id', 1)
+                    .single();
+                
+                if (error) throw error;
+                
+                updateDisplay(data);
+                document.getElementById('connection-status').textContent = '● Connected';
+                document.getElementById('connection-status').className = 'connection-status connected';
+            } catch (e) {
+                console.error('Fetch error:', e);
+                document.getElementById('connection-status').textContent = '● Disconnected';
+                document.getElementById('connection-status').className = 'connection-status disconnected';
             }
+        }
+        
+        // Subscribe to realtime updates
+        function subscribeToUpdates() {
+            supabase
+                .channel('dashboard-changes')
+                .on('postgres_changes', 
+                    { event: 'UPDATE', schema: 'public', table: 'dashboard' },
+                    (payload) => {
+                        console.log('Realtime update:', payload);
+                        updateDisplay(payload.new);
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('Subscription status:', status);
+                    if (status === 'SUBSCRIBED') {
+                        document.getElementById('connection-status').textContent = '● Realtime Connected';
+                        document.getElementById('connection-status').className = 'connection-status connected';
+                    }
+                });
         }
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            initChart();
             fetchData();
-            // Refresh data every 30 seconds
-            setInterval(fetchData, 30000);
+            subscribeToUpdates();
+            // Also poll every 5 seconds as backup
+            setInterval(fetchData, 5000);
         });
     </script>
 </body>

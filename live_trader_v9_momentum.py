@@ -77,6 +77,51 @@ class MomentumBot:
             'total_profit': 0,
             'current_streak': 0
         }
+        self.load_stats()  # Load historical stats
+    
+    def load_stats(self):
+        """Load stats from historical trades"""
+        trades_file = "logs/trades.jsonl"
+        if os.path.exists(trades_file):
+            wins = losses = profit = 0
+            last_results = []
+            with open(trades_file, 'r') as f:
+                for line in f:
+                    if line.strip():
+                        try:
+                            t = json.loads(line)
+                            if t.get('action') == 'CLOSE':
+                                if t.get('won'):
+                                    wins += 1
+                                    last_results.append(True)
+                                else:
+                                    losses += 1
+                                    last_results.append(False)
+                                profit += t.get('profit', 0)
+                        except:
+                            pass
+            
+            # Calculate current streak
+            streak = 0
+            for won in reversed(last_results):
+                if won:
+                    if streak >= 0:
+                        streak += 1
+                    else:
+                        break
+                else:
+                    if streak <= 0:
+                        streak -= 1
+                    else:
+                        break
+            
+            self.stats['wins'] = wins
+            self.stats['losses'] = losses
+            self.stats['rounds_traded'] = wins + losses
+            self.stats['total_profit'] = profit
+            self.stats['current_streak'] = streak
+            
+            logger.info(f"Loaded historical stats: {wins}W/{losses}L, P&L: ${profit:.2f}")
     
     def save_position_state(self):
         """Save current position state for dashboard"""
@@ -580,6 +625,12 @@ class MomentumBot:
                         direction = momentum['direction']
                         confidence = momentum['confidence']
                         
+                        # DOWN BIAS: If confidence < 55%, default to DOWN
+                        # Based on data: DOWN wins 77%, UP wins 29%
+                        if confidence < 0.55:
+                            direction = 'DOWN'
+                            logger.info(f"Low confidence ({confidence:.0%}) - defaulting to DOWN (77% win rate)")
+                        
                         # Fetch orderbook for our chosen side
                         token_id = self.token_ids[direction.capitalize()]
                         book = await self.fetch_order_book(token_id)
@@ -601,9 +652,9 @@ class MomentumBot:
                             logger.warning(f"[{time_left:.0f}s] Failed to fetch orderbook")
                     
                     else:
-                        # Missed entry window - force entry with default
-                        logger.warning("Entry window closing - forcing entry")
-                        direction = momentum['direction'] or 'UP'
+                        # Missed entry window - force entry with DOWN (our edge)
+                        logger.warning("Entry window closing - forcing DOWN entry")
+                        direction = 'DOWN'  # DOWN has 77% win rate
                         await self.enter_position(direction, MIN_SHARES, 0.50)
                 
                 # HOLDING PHASE: Monitor position
