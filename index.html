@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Polymarket Bot - Live Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Using direct REST API instead of SDK for reliability -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -338,11 +338,9 @@
     </div>
     
     <script>
-        // Supabase config
+        // Supabase REST API config
         const SUPABASE_URL = 'https://knmiigfwovdxmeyxexqq.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtubWlpZ2Z3b3ZkeG1leXhleHFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExMzI4NTQsImV4cCI6MjA4NjcwODg1NH0.uOZAykf9Ax878UCsdXJIiSw3n7MQ9V0UQGTrJRgn_1c';
-        
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         function updateDisplay(data) {
             if (!data) return;
@@ -418,50 +416,33 @@
         
         async function fetchData() {
             try {
-                const { data, error } = await supabase
-                    .from('dashboard')
-                    .select('*')
-                    .eq('id', 1)
-                    .single();
-                
-                if (error) throw error;
-                
-                updateDisplay(data);
-                document.getElementById('connection-status').textContent = '● Connected';
-                document.getElementById('connection-status').className = 'connection-status connected';
-            } catch (e) {
-                console.error('Fetch error:', e);
-                document.getElementById('connection-status').textContent = '● Disconnected';
-                document.getElementById('connection-status').className = 'connection-status disconnected';
-            }
-        }
-        
-        // Subscribe to realtime updates
-        function subscribeToUpdates() {
-            supabase
-                .channel('dashboard-changes')
-                .on('postgres_changes', 
-                    { event: 'UPDATE', schema: 'public', table: 'dashboard' },
-                    (payload) => {
-                        console.log('Realtime update:', payload);
-                        updateDisplay(payload.new);
-                    }
-                )
-                .subscribe((status) => {
-                    console.log('Subscription status:', status);
-                    if (status === 'SUBSCRIBED') {
-                        document.getElementById('connection-status').textContent = '● Realtime Connected';
-                        document.getElementById('connection-status').className = 'connection-status connected';
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/dashboard?id=eq.1`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
                     }
                 });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const rows = await response.json();
+                if (rows && rows.length > 0) {
+                    updateDisplay(rows[0]);
+                    document.getElementById('connection-status').textContent = '● Connected';
+                    document.getElementById('connection-status').className = 'connection-status connected';
+                }
+            } catch (e) {
+                console.error('Fetch error:', e);
+                document.getElementById('connection-status').textContent = '● Error: ' + e.message;
+                document.getElementById('connection-status').className = 'connection-status disconnected';
+            }
         }
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             fetchData();
-            subscribeToUpdates();
-            // Also poll every 5 seconds as backup
-            setInterval(fetchData, 5000);
+            // Poll every 3 seconds for live updates
+            setInterval(fetchData, 3000);
         });
     </script>
 </body>
