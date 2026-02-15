@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Bot - Live Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #141419;
+            --border: #2a2a35;
+            --text-primary: #e8e8f0;
+            --text-secondary: #9090a8;
+            --accent: #6366f1;
+            --green: #22c55e;
+            --red: #ef4444;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .header-left { display: flex; align-items: center; gap: 1.5rem; }
+        
+        h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #22c55e, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .view-badge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #000;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .header-right { display: flex; gap: 1rem; align-items: center; }
+        
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--green);
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        
+        .stat-value.positive { color: var(--green); }
+        .stat-value.negative { color: var(--red); }
+        
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .section h2 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .chart-container {
+            background: #0d1421;
+            border: 1px solid #1e3a5f;
+            border-radius: 8px;
+            padding: 1rem;
+            height: 300px;
+            position: relative;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .chart-title { color: #60a5fa; font-weight: 600; }
+        .chart-value { color: #fbbf24; font-size: 1.2rem; font-weight: 700; }
+        
+        .trades-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .trades-table th {
+            text-align: left;
+            padding: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .trades-table td {
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .trades-table tr:last-child td { border-bottom: none; }
+        
+        .side-up { color: var(--green); font-weight: 600; }
+        .side-down { color: var(--red); font-weight: 600; }
+        
+        .profit-positive { color: var(--green); font-weight: 700; }
+        .profit-negative { color: var(--red); font-weight: 700; }
+        
+        .result-won { color: var(--green); }
+        .result-lost { color: var(--red); }
+        
+        .info-banner {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            border: 1px solid #4338ca;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .info-banner h3 {
+            color: #a5b4fc;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-banner p {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        .live-position {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .position-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        
+        .position-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        
+        .position-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>🤖 POLYMARKET BOT</h1>
+                <span class="view-badge">👁️ View Only</span>
+            </div>
+            <div class="header-right">
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    <span id="status-text">LIVE</span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="info-banner">
+            <h3>📊 Live Trading Dashboard</h3>
+            <p>This bot trades BTC 5-minute Up/Down markets on Polymarket using momentum signals.</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total P&L</div>
+                <div class="stat-value positive" id="total-pnl">+$0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Win Rate</div>
+                <div class="stat-value" id="win-rate">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Trades</div>
+                <div class="stat-value" id="total-trades">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Current Streak</div>
+                <div class="stat-value" id="streak">0</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📈 Live Position</h2>
+            <div class="live-position" id="live-position">
+                <div class="position-item">
+                    <div class="position-label">Side</div>
+                    <div class="position-value" id="pos-side">-</div>
+                </div>
+                <div class="position-item">
+                    <div class="position-label">Shares</div>
+                    <div class="position-value" id="pos-shares">0</div>
+                </div>
+                <div class="position-item">
+                    <div class="position-label">Cost</div>
+                    <div class="position-value" id="pos-cost">$0.00</div>
+                </div>
+                <div class="position-item">
+                    <div class="position-label">Live P&L</div>
+                    <div class="position-value positive" id="pos-pnl">$0.00</div>
+                </div>
+                <div class="position-item">
+                    <div class="position-label">Status</div>
+                    <div class="position-value" id="pos-status">Waiting</div>
+                </div>
+                <div class="position-item">
+                    <div class="position-label">Time Left</div>
+                    <div class="position-value" id="pos-time">0:00</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Probability Chart</h2>
+            <div class="chart-container">
+                <div class="chart-header">
+                    <span class="chart-title">UP Probability</span>
+                    <span class="chart-value" id="chart-prob">50%</span>
+                </div>
+                <canvas id="prob-chart"></canvas>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Recent Trades</h2>
+            <table class="trades-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Side</th>
+                        <th>Invested</th>
+                        <th>Profit</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody id="trades-body">
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-secondary);">
+                            Loading trades...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>Built with ❤️ | Polymarket BTC Up/Down Bot</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="https://polymarket.com" target="_blank">Polymarket</a> • 
+                <a href="https://github.com" target="_blank">GitHub</a>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Demo data for public view
+        const demoData = {
+            stats: {
+                total_profit: 15.50,
+                wins: 8,
+                losses: 3,
+                rounds_traded: 11,
+                current_streak: 2
+            },
+            position: {
+                has_position: true,
+                side: "UP",
+                shares: 15,
+                cost: 7.50,
+                live_pnl: 4.20,
+                winning: true,
+                time_remaining: 180,
+                up_probability: 68
+            },
+            trades: [
+                { time: "2:15 PM", side: "UP", invested: 7.50, profit: 7.50, won: true },
+                { time: "2:10 PM", side: "DOWN", invested: 5.00, profit: -5.00, won: false },
+                { time: "2:05 PM", side: "UP", invested: 7.50, profit: 7.50, won: true },
+                { time: "2:00 PM", side: "DOWN", invested: 7.50, profit: 7.50, won: true },
+                { time: "1:55 PM", side: "UP", invested: 3.00, profit: -3.00, won: false },
+            ]
+        };
+        
+        // Initialize chart
+        let probChart;
+        
+        function initChart() {
+            const ctx = document.getElementById('prob-chart').getContext('2d');
+            probChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['', '', '', '', '', '', '', '', '', ''],
+                    datasets: [{
+                        data: [50, 52, 55, 58, 62, 65, 63, 68, 70, 68],
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: { color: 'rgba(30, 58, 95, 0.5)' },
+                            ticks: { 
+                                color: '#9ca3af',
+                                callback: v => v + '%'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateDisplay() {
+            const { stats, position, trades } = demoData;
+            
+            // Update stats
+            const pnl = stats.total_profit;
+            document.getElementById('total-pnl').textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
+            document.getElementById('total-pnl').className = `stat-value ${pnl >= 0 ? 'positive' : 'negative'}`;
+            
+            const winRate = stats.rounds_traded > 0 ? (stats.wins / stats.rounds_traded * 100) : 0;
+            document.getElementById('win-rate').textContent = `${winRate.toFixed(0)}%`;
+            document.getElementById('total-trades').textContent = stats.rounds_traded;
+            document.getElementById('streak').textContent = stats.current_streak > 0 ? `+${stats.current_streak}` : stats.current_streak;
+            
+            // Update position
+            if (position.has_position) {
+                document.getElementById('pos-side').textContent = position.side;
+                document.getElementById('pos-side').className = `position-value ${position.side === 'UP' ? 'side-up' : 'side-down'}`;
+                document.getElementById('pos-shares').textContent = position.shares;
+                document.getElementById('pos-cost').textContent = `$${position.cost.toFixed(2)}`;
+                document.getElementById('pos-pnl').textContent = `${position.live_pnl >= 0 ? '+' : ''}$${position.live_pnl.toFixed(2)}`;
+                document.getElementById('pos-pnl').className = `position-value ${position.live_pnl >= 0 ? 'positive' : 'negative'}`;
+                document.getElementById('pos-status').textContent = position.winning ? '📈 Winning' : '📉 Losing';
+                
+                const mins = Math.floor(position.time_remaining / 60);
+                const secs = position.time_remaining % 60;
+                document.getElementById('pos-time').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                
+                document.getElementById('chart-prob').textContent = `${position.up_probability}%`;
+            }
+            
+            // Update trades
+            const tbody = document.getElementById('trades-body');
+            tbody.innerHTML = trades.map(t => `
+                <tr>
+                    <td>${t.time}</td>
+                    <td class="${t.side === 'UP' ? 'side-up' : 'side-down'}">${t.side}</td>
+                    <td>$${t.invested.toFixed(2)}</td>
+                    <td class="${t.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${t.profit >= 0 ? '+' : ''}$${t.profit.toFixed(2)}</td>
+                    <td class="${t.won ? 'result-won' : 'result-lost'}">${t.won ? '✅ Won' : '❌ Lost'}</td>
+                </tr>
+            `).join('');
+        }
+        
+        // Simulate live updates
+        function simulateUpdates() {
+            // Randomly adjust probability
+            const newProb = Math.min(99, Math.max(1, demoData.position.up_probability + (Math.random() - 0.5) * 10));
+            demoData.position.up_probability = Math.round(newProb);
+            
+            // Update time
+            demoData.position.time_remaining = Math.max(0, demoData.position.time_remaining - 5);
+            if (demoData.position.time_remaining === 0) {
+                demoData.position.time_remaining = 300;
+            }
+            
+            // Update P&L based on probability
+            demoData.position.winning = newProb > 50;
+            demoData.position.live_pnl = demoData.position.winning ? 
+                (demoData.position.shares - demoData.position.cost) : 
+                -demoData.position.cost;
+            
+            // Update chart
+            if (probChart) {
+                probChart.data.datasets[0].data.shift();
+                probChart.data.datasets[0].data.push(newProb);
+                probChart.update('none');
+            }
+            
+            updateDisplay();
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            updateDisplay();
+            setInterval(simulateUpdates, 5000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Environment and secrets
+.env
+*.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# State files (contain live data)
+position_state.json
+probability_history.json
+current_market.json
+bot_state.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (if any)
+node_modules/

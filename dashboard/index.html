@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Polymarket Bot Dashboard</title>
+    <link rel="stylesheet" href="style.css?v=17">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-left">
+                <h1>POLYMARKET BOT</h1>
+                <div class="balance-display" onclick="openWalletModal()">
+                    <span class="balance-label">BALANCE</span>
+                    <span class="balance-value" id="header-balance">$0.00</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="last-update" id="last-update">Updated: --:--:--</div>
+                <div class="current-time" id="current-time">--</div>
+                <button class="mode-toggle" id="mode-toggle" onclick="toggleMode()">
+                    <span id="mode-icon">📄</span>
+                    <span id="mode-label">PAPER TRADE</span>
+                </button>
+                <div class="status-badge" id="status-badge">
+                    <span class="dot" id="status-dot"></span>
+                    <span id="status-text">LOADING</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Bot Status + Live Chart -->
+        <section class="section">
+            <h2>BOT STATUS</h2>
+            <div class="market-input-card" style="display: flex; gap: 1.5rem; align-items: stretch;">
+                <!-- Left: Autonomous Status (50%) -->
+                <div class="autonomous-status" style="flex: 1; min-width: 0;">
+                    <div class="auto-badge">
+                        <span class="auto-icon">🤖</span>
+                        <span class="auto-label">FULLY AUTONOMOUS</span>
+                    </div>
+                    <div class="auto-description">
+                        Bot automatically discovers and trades BTC 5-minute markets.<br>
+                        No manual input required - monitoring live markets 24/7.
+                    </div>
+                    <div class="auto-settings">
+                        <div class="setting-item">
+                            <span class="setting-label">Strategy:</span>
+                            <span class="setting-value" id="strategy-display">Hedge Strategy (buy both, sell loser)</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Position Size:</span>
+                            <span class="setting-value">10 shares per trade</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Mode:</span>
+                            <span class="setting-value" id="trading-mode-display">Paper Trading</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Total Trades:</span>
+                            <span class="setting-value" id="bot-total-trades">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right: Custom Live Chart (50%) -->
+                <div class="live-chart-panel" style="flex: 1; min-width: 0; background: #0d1421; border: 1px solid #1e3a5f; border-radius: 8px; padding: 1rem; min-height: 400px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <div>
+                            <div style="color: #60a5fa; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">LIVE PROBABILITY</div>
+                            <div style="color: #e8e8f0; font-size: 1.1rem; font-weight: 600;" id="chart-title">UP Chance: 50%</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #9ca3af; font-size: 0.7rem;">TARGET PRICE</div>
+                            <div style="color: #fbbf24; font-size: 1rem; font-weight: 600;" id="chart-target">$70,000</div>
+                        </div>
+                    </div>
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="probability-chart"></canvas>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #1e3a5f;">
+                        <div style="color: #9ca3af; font-size: 0.8rem;">BTC: <span id="chart-btc" style="color: #22c55e; font-weight: 600;">$70,000</span></div>
+                        <div style="color: #9ca3af; font-size: 0.8rem;">Time Left: <span id="chart-time" style="color: #60a5fa; font-weight: 600;">5:00</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Account Info -->
+        <section class="section account-section">
+            <div class="account-card">
+                <div class="account-status">
+                    <span class="account-label">ACCOUNT STATUS</span>
+                    <span class="account-value" id="account-status">Not Connected</span>
+                </div>
+                <div class="account-balance">
+                    <span class="account-label">BALANCE (USDC)</span>
+                    <span class="account-value" id="account-balance">$0.00</span>
+                </div>
+                <div class="account-api">
+                    <span class="account-label">API KEY</span>
+                    <span class="account-value api-key" id="api-key-status">Not configured</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">TOTAL P&L</div>
+                <div class="stat-value pnl" id="total-pnl">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">WIN RATE</div>
+                <div class="stat-value" id="win-rate">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">TRADES</div>
+                <div class="stat-value" id="total-trades">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">AVG PROFIT</div>
+                <div class="stat-value" id="avg-profit">$0.00</div>
+            </div>
+        </div>
+
+        <!-- Live Position -->
+        <section class="section" id="live-position-section">
+            <h2>LIVE POSITION</h2>
+            <div class="market-card" id="live-position">
+                <div class="market-empty">No open position</div>
+            </div>
+        </section>
+
+        <!-- Current Market section removed -->
+
+        <!-- Recent Trades -->
+        <section class="section">
+            <h2>RECENT TRADES</h2>
+            <div class="trades-table">
+                <div class="trades-header">
+                    <div class="th">TIME</div>
+                    <div class="th">SIDE</div>
+                    <div class="th">INVESTED</div>
+                    <div class="th">PROFIT</div>
+                    <div class="th">RESULT</div>
+                </div>
+                <div class="trades-body" id="trades-container">
+                    <div class="trades-empty">No trades yet</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Wallet Modal -->
+    <div class="modal-overlay" id="wallet-modal" onclick="closeWalletModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>💰 Wallet</h2>
+                <button class="modal-close" onclick="closeWalletModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="wallet-balance">
+                    <div class="wallet-balance-label">USDC Balance (Polygon)</div>
+                    <div class="wallet-balance-value" id="modal-balance">$0.00</div>
+                    <div class="wallet-balance-usdc" id="modal-usdc">0.00 USDC</div>
+                </div>
+                <div class="wallet-extra-info">
+                    <div class="extra-row">
+                        <span>MATIC (for gas):</span>
+                        <span id="modal-matic">0.0000</span>
+                    </div>
+                    <div class="extra-row">
+                        <span>Paper P&L:</span>
+                        <span id="modal-paper-pnl" class="positive">$0.00</span>
+                    </div>
+                </div>
+                
+                <div class="wallet-actions">
+                    <button class="wallet-btn deposit" onclick="showDeposit()">
+                        <span class="btn-icon">⬇️</span>
+                        <span>Deposit</span>
+                    </button>
+                    <button class="wallet-btn withdraw" onclick="showWithdraw()">
+                        <span class="btn-icon">⬆️</span>
+                        <span>Withdraw</span>
+                    </button>
+                </div>
+                
+                <div class="wallet-section" id="deposit-section" style="display: none;">
+                    <h3>📥 Deposit USDC</h3>
+                    <p class="section-desc">Send USDC on Polygon network to your bot wallet:</p>
+                    <div class="wallet-address-box">
+                        <div class="address-value" id="deposit-address">Loading...</div>
+                        <button class="copy-btn" onclick="copyAddress()">
+                            <span class="copy-icon">📋</span> Copy Address
+                        </button>
+                    </div>
+                    <div class="deposit-steps">
+                        <div class="step"><span class="step-num">1</span> Copy address above</div>
+                        <div class="step"><span class="step-num">2</span> Send USDC from exchange (Coinbase, Binance)</div>
+                        <div class="step"><span class="step-num">3</span> Select <strong>Polygon</strong> network</div>
+                    </div>
+                    <div class="deposit-warning">
+                        <span class="warning-icon">⚠️</span>
+                        <span>Only send USDC on <strong>Polygon (MATIC)</strong> network!</span>
+                    </div>
+                </div>
+                
+                <div class="wallet-section" id="withdraw-section" style="display: none;">
+                    <h3>Withdraw USDC</h3>
+                    <div class="form-group">
+                        <label>Amount (USDC)</label>
+                        <input type="number" id="withdraw-amount" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Destination Address</label>
+                        <input type="text" id="withdraw-address" placeholder="0x...">
+                    </div>
+                    <button class="wallet-btn withdraw-confirm" onclick="confirmWithdraw()">
+                        Confirm Withdrawal
+                    </button>
+                </div>
+                
+                <div class="wallet-info">
+                    <div class="info-row">
+                        <span>Network:</span>
+                        <span>Polygon (MATIC)</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Status:</span>
+                        <span id="wallet-status">Not Connected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let updateInterval;
+        let currentMode = 'paper'; // 'paper' or 'live'
+
+        // Toggle trading mode
+        async function toggleMode() {
+            const newMode = currentMode === 'paper' ? 'live' : 'paper';
+            
+            // Update mode display in autonomous section
+            const modeDisplay = document.getElementById('trading-mode-display');
+            if (modeDisplay) {
+                modeDisplay.textContent = newMode === 'paper' ? 'Paper Trading' : 'Live Trading';
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/set-mode`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mode: newMode})
+                });
+                
+                if (res.ok) {
+                    currentMode = newMode;
+                    updateModeUI();
+                }
+            } catch (err) {
+                console.error('Failed to toggle mode:', err);
+            }
+        }
+
+        // Update mode button UI
+        function updateModeUI() {
+            const button = document.getElementById('mode-toggle');
+            const icon = document.getElementById('mode-icon');
+            const label = document.getElementById('mode-label');
+            
+            if (currentMode === 'paper') {
+                button.className = 'mode-toggle paper';
+                icon.textContent = '📄';
+                label.textContent = 'PAPER TRADE';
+            } else {
+                button.className = 'mode-toggle live';
+                icon.textContent = '💰';
+                label.textContent = 'LIVE TRADING';
+            }
+        }
+
+        // Fetch and update account info
+        async function updateAccount() {
+            try {
+                const res = await fetch(`${API_BASE}/account`);
+                const data = await res.json();
+                
+                document.getElementById('account-status').textContent = data.connected ? 'Connected' : 'Not Connected';
+                document.getElementById('account-balance').textContent = `$${(data.balance || 0).toFixed(2)}`;
+                document.getElementById('api-key-status').textContent = data.api_key_configured ? 'Configured' : 'Not configured';
+                
+                currentMode = data.mode || 'paper';
+                updateModeUI();
+            } catch (err) {
+                console.error('Failed to fetch account:', err);
+            }
+        }
+
+        // Fetch and update status
+        async function updateStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/status`);
+                const data = await res.json();
+                
+                const badge = document.getElementById('status-badge');
+                const dot = document.getElementById('status-dot');
+                const text = document.getElementById('status-text');
+                
+                const status = data.status || 'idle';
+                const mode = data.mode || 'manual';
+                
+                // Update total trades if available
+                if (data.total_trades !== undefined) {
+                    document.getElementById('bot-total-trades').textContent = data.total_trades;
+                }
+                
+                // Show RUNNING if autonomous mode is active
+                if (mode === 'autonomous' && status !== 'error') {
+                    text.textContent = 'RUNNING';
+                } else if (status === 'monitoring') {
+                    text.textContent = 'MONITORING';
+                } else {
+                    text.textContent = status.toUpperCase();
+                }
+                
+                badge.className = 'status-badge';
+                dot.className = 'dot';
+                
+                if (status === 'watching' || status === 'leg1_filled' || status === 'running') {
+                    badge.classList.add('active');
+                    dot.classList.add('pulse');
+                } else if (status === 'error') {
+                    badge.classList.add('error');
+                } else {
+                    badge.classList.add('idle');
+                }
+            } catch (err) {
+                console.error('Failed to fetch status:', err);
+                document.getElementById('status-text').textContent = 'OFFLINE';
+                document.getElementById('status-badge').className = 'status-badge error';
+            }
+        }
+
+        // Fetch and update stats
+        async function updateStats() {
+            try {
+                const res = await fetch(`${API_BASE}/stats`);
+                const data = await res.json();
+                
+                document.getElementById('total-pnl').textContent = formatMoney(data.total_pnl || 0);
+                document.getElementById('win-rate').textContent = `${(data.win_rate * 100).toFixed(1)}%`;
+                document.getElementById('total-trades').textContent = data.total_trades || 0;
+                document.getElementById('avg-profit').textContent = formatMoney(data.avg_profit || 0);
+                
+                const pnlEl = document.getElementById('total-pnl');
+                pnlEl.className = 'stat-value pnl';
+                if (data.total_pnl > 0) pnlEl.classList.add('positive');
+                else if (data.total_pnl < 0) pnlEl.classList.add('negative');
+            } catch (err) {
+                console.error('Failed to fetch stats:', err);
+            }
+        }
+
+        // Fetch and update current market
+        async function updateMarket() {
+            try {
+                const statusRes = await fetch(`${API_BASE}/status`);
+                const statusData = await statusRes.json();
+                
+                const container = document.getElementById('current-market');
+                
+                if (!statusData.current_round) {
+                    container.innerHTML = '<div class="market-empty">Discovering next market...</div>';
+                    return;
+                }
+                
+                // Build market display with probabilities if available
+                let marketHTML = `<div class="market-question">${statusData.current_round}</div>`;
+                
+                // Show probabilities if in monitoring mode
+                if (statusData.mode === 'probability' && statusData.up_probability !== undefined) {
+                    const upProb = (statusData.up_probability * 100).toFixed(1);
+                    const downProb = (statusData.down_probability * 100).toFixed(1);
+                    const timeLeft = Math.floor(statusData.time_left || 0);
+                    const threshold = (statusData.threshold * 100).toFixed(0);
+                    
+                    marketHTML += `
+                        <div class="market-probabilities">
+                            <div class="prob-item ${statusData.up_probability >= statusData.threshold ? 'threshold-hit' : ''}">
+                                <span class="prob-label">UP</span>
+                                <span class="prob-value">${upProb}%</span>
+                            </div>
+                            <div class="prob-item ${statusData.down_probability >= statusData.threshold ? 'threshold-hit' : ''}">
+                                <span class="prob-label">DOWN</span>
+                                <span class="prob-value">${downProb}%</span>
+                            </div>
+                        </div>
+                        <div class="market-info">
+                            <div class="info-item">
+                                <span class="info-label">Time Left:</span>
+                                <span class="info-value">${timeLeft}s</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Threshold:</span>
+                                <span class="info-value">${threshold}%</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Traded:</span>
+                                <span class="info-value">${statusData.has_traded ? 'Yes' : 'No'}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    marketHTML += `
+                        <div class="market-info">
+                            <div class="info-item">
+                                <span class="info-label">Status:</span>
+                                <span class="info-value">${statusData.closed ? 'Closed' : 'Active'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Slug:</span>
+                                <span class="info-value">${statusData.market_slug || 'N/A'}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = marketHTML;
+                
+                // Try to fetch market prices too
+                const res = await fetch(`${API_BASE}/markets`);
+                const markets = await res.json();
+                
+                if (!markets || markets.length === 0) {
+                    return;
+                }
+                
+                const market = markets[0];
+                container.innerHTML = `
+                    <div class="market-question">${market.question || statusData.current_round}</div>
+                    <div class="market-prices">
+                        <div class="price-item">
+                            <span class="price-label">UP</span>
+                            <span class="price-value">${(market.up_price || 0).toFixed(3)}</span>
+                        </div>
+                        <div class="price-item">
+                            <span class="price-label">DOWN</span>
+                            <span class="price-value">${(market.down_price || 0).toFixed(3)}</span>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error('Failed to fetch markets:', err);
+            }
+        }
+
+        // Fetch and update trades
+        async function updateTrades() {
+            try {
+                const res = await fetch(`${API_BASE}/trades`);
+                const trades = await res.json();
+                
+                const container = document.getElementById('trades-container');
+                
+                if (!trades || trades.length === 0) {
+                    container.innerHTML = '<div class="trades-empty">No trades yet</div>';
+                    return;
+                }
+                
+                // Filter to only show COMPLETED trades (not open entries)
+                const completedTrades = trades.filter(t => 
+                    t.action === 'CLOSE' || 
+                    t.status === 'completed' || 
+                    (t.profit !== undefined && t.action !== 'ENTER' && t.action !== 'ENTER_HEDGE')
+                );
+                
+                if (completedTrades.length === 0) {
+                    container.innerHTML = '<div class="trades-empty">No completed trades yet</div>';
+                    return;
+                }
+                
+                container.innerHTML = completedTrades.slice(0, 10).map(trade => {
+                    // Determine side and result
+                    let side = trade.side || 'N/A';
+                    let profit = parseFloat(trade.profit) || 0;
+                    let shares = trade.shares || 0;
+                    let entryPrice = trade.entry_price || trade.leg1_entry || 0;
+                    let cost = shares * entryPrice;  // Total invested
+                    let won = false;
+                    let result = '';
+                    
+                    // Use cost from trade if available
+                    if (trade.cost) cost = trade.cost;
+                    
+                    if (trade.action === 'CLOSE') {
+                        won = trade.won;
+                        result = trade.won ? '✅ WON' : '❌ LOST';
+                    } else if (trade.status === 'completed') {
+                        won = profit > 0;
+                        result = profit > 0 ? '✅ WON' : '❌ LOST';
+                    } else {
+                        won = profit > 0;
+                        result = trade.status || 'DONE';
+                    }
+                    
+                    // Format timestamp
+                    const date = new Date(trade.timestamp * 1000);
+                    const today = new Date();
+                    const isToday = date.toDateString() === today.toDateString();
+                    
+                    let timestamp;
+                    if (isToday) {
+                        timestamp = date.toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: true 
+                        });
+                    } else {
+                        timestamp = date.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric'
+                        }) + ' ' + date.toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: true 
+                        });
+                    }
+                    
+                    // Format values
+                    const profitStr = profit >= 0 ? `+$${profit.toFixed(2)}` : `-$${Math.abs(profit).toFixed(2)}`;
+                    const profitClass = profit > 0 ? 'positive' : profit < 0 ? 'negative' : '';
+                    const costStr = `$${cost.toFixed(2)}`;
+                    
+                    // Row colors
+                    const rowBg = won ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                    const rowBorder = won ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+                    
+                    return `
+                        <div class="trade-row" style="background: ${rowBg}; border-left: 3px solid ${rowBorder};">
+                            <div class="td">${timestamp}</div>
+                            <div class="td" style="color: ${side === 'UP' ? '#22c55e' : '#ef4444'}; font-weight: 600;">${side}</div>
+                            <div class="td" style="color: #fbbf24;">${costStr}</div>
+                            <div class="td ${profitClass}" style="font-weight: 700; font-size: 1.1rem;">${profitStr}</div>
+                            <div class="td" style="font-weight: 500;">${result}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Failed to fetch trades:', err);
+            }
+        }
+
+        function formatMoney(value) {
+            const sign = value >= 0 ? '+' : '';
+            return `${sign}$${Math.abs(value).toFixed(4)}`;
+        }
+
+        // Initialize probability chart
+        let probabilityChart = null;
+        
+        function initChart() {
+            const ctx = document.getElementById('probability-chart').getContext('2d');
+            
+            probabilityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'UP Probability',
+                        data: [],
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: { color: 'rgba(30, 58, 95, 0.5)' },
+                            ticks: { color: '#9ca3af', maxTicksLimit: 6 }
+                        },
+                        y: {
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: { color: 'rgba(30, 58, 95, 0.5)' },
+                            ticks: { 
+                                color: '#9ca3af',
+                                callback: function(value) { return value + '%'; }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        // Update probability chart with live data
+        async function updateChart() {
+            try {
+                const [historyRes, posRes] = await Promise.all([
+                    fetch(`${API_BASE}/probability-history`),
+                    fetch(`${API_BASE}/position`)
+                ]);
+                
+                const history = await historyRes.json();
+                const pos = await posRes.json();
+                
+                // Update chart info
+                document.getElementById('chart-title').textContent = `UP Chance: ${Math.round(pos.up_probability || 50)}%`;
+                document.getElementById('chart-target').textContent = pos.target_price ? `$${pos.target_price.toLocaleString()}` : '$--';
+                document.getElementById('chart-btc').textContent = pos.btc_price ? `$${pos.btc_price.toLocaleString()}` : '$--';
+                
+                // Update time remaining
+                const timeLeft = Math.max(0, Math.floor(pos.time_remaining || 0));
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                document.getElementById('chart-time').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                
+                // Update chart data
+                if (probabilityChart && history.length > 0) {
+                    const labels = history.map(h => {
+                        const d = new Date(h.timestamp * 1000);
+                        return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    });
+                    const data = history.map(h => h.up_probability);
+                    
+                    probabilityChart.data.labels = labels;
+                    probabilityChart.data.datasets[0].data = data;
+                    probabilityChart.update('none');
+                }
+            } catch (err) {
+                console.error('Failed to update chart:', err);
+            }
+        }
+
+        // Initialize chart on load
+        document.addEventListener('DOMContentLoaded', initChart);
+
+        // Wallet Modal Functions
+        function openWalletModal() {
+            document.getElementById('wallet-modal').classList.add('active');
+            updateWalletBalance();
+        }
+        
+        function closeWalletModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('wallet-modal').classList.remove('active');
+            document.getElementById('deposit-section').style.display = 'none';
+            document.getElementById('withdraw-section').style.display = 'none';
+        }
+        
+        function showDeposit() {
+            document.getElementById('deposit-section').style.display = 'block';
+            document.getElementById('withdraw-section').style.display = 'none';
+        }
+        
+        function showWithdraw() {
+            document.getElementById('withdraw-section').style.display = 'block';
+            document.getElementById('deposit-section').style.display = 'none';
+        }
+        
+        function copyAddress() {
+            const addressEl = document.getElementById('deposit-address');
+            const address = addressEl.dataset.fullAddress || addressEl.textContent;
+            navigator.clipboard.writeText(address);
+            
+            // Visual feedback
+            const btn = event.target.closest('.copy-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="copy-icon">✅</span> Copied!';
+            btn.style.background = '#22c55e';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+        
+        function confirmWithdraw() {
+            const amount = document.getElementById('withdraw-amount').value;
+            const address = document.getElementById('withdraw-address').value;
+            if (!amount || !address) {
+                alert('Please fill in all fields');
+                return;
+            }
+            alert(`Withdrawal of $${amount} to ${address} - Feature coming soon!`);
+        }
+        
+        async function updateWalletBalance() {
+            try {
+                const res = await fetch(`${API_BASE}/account`);
+                const data = await res.json();
+                
+                // USDC balance (real blockchain balance)
+                const usdcBalance = data.usdc_balance || 0;
+                const maticBalance = data.matic_balance || 0;
+                const paperBalance = data.paper_balance || 100;
+                const displayBalance = data.balance || 0;
+                
+                // Update header balance
+                document.getElementById('header-balance').textContent = `$${displayBalance.toFixed(2)}`;
+                
+                // Update modal balances
+                document.getElementById('modal-balance').textContent = `$${usdcBalance.toFixed(2)}`;
+                document.getElementById('modal-usdc').textContent = `${usdcBalance.toFixed(2)} USDC`;
+                document.getElementById('modal-matic').textContent = `${maticBalance.toFixed(4)} MATIC`;
+                
+                // Paper P&L
+                const paperPnl = paperBalance - 100;
+                const paperPnlEl = document.getElementById('modal-paper-pnl');
+                paperPnlEl.textContent = `${paperPnl >= 0 ? '+' : ''}$${paperPnl.toFixed(2)}`;
+                paperPnlEl.className = paperPnl >= 0 ? 'positive' : 'negative';
+                
+                // Connection status
+                const statusText = data.connected ? '✅ Connected' : '❌ Not Connected';
+                document.getElementById('wallet-status').textContent = statusText;
+                
+                // Update wallet address
+                if (data.wallet_address) {
+                    const addr = data.wallet_address;
+                    document.getElementById('deposit-address').textContent = addr;
+                    document.getElementById('deposit-address').dataset.fullAddress = addr;
+                } else {
+                    document.getElementById('deposit-address').textContent = 'Wallet not configured';
+                }
+            } catch (err) {
+                console.error('Failed to fetch balance:', err);
+            }
+        }
+
+        // Fetch and update live position
+        async function updateLivePosition() {
+            try {
+                const res = await fetch(`${API_BASE}/position`);
+                const pos = await res.json();
+                
+                const container = document.getElementById('live-position');
+                
+                if (!pos.has_position) {
+                    container.innerHTML = '<div class="market-empty">No open position - waiting for next round</div>';
+                    return;
+                }
+                
+                const pnlClass = pos.live_pnl >= 0 ? 'positive' : 'negative';
+                const statusEmoji = pos.winning ? '📈 WINNING' : '📉 LOSING';
+                const timeLeft = Math.max(0, Math.floor(pos.time_remaining));
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                
+                container.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; padding: 1rem;">
+                        <div class="stat-card">
+                            <div class="stat-label">SIDE</div>
+                            <div class="stat-value" style="color: ${pos.side === 'UP' ? '#22c55e' : '#ef4444'}">${pos.side}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">SHARES</div>
+                            <div class="stat-value">${pos.shares}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">COST</div>
+                            <div class="stat-value">$${pos.cost.toFixed(2)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">LIVE P&L</div>
+                            <div class="stat-value ${pnlClass}" style="font-size: 1.5rem;">${formatMoney(pos.live_pnl)}</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; padding: 0 1rem 1rem;">
+                        <div class="stat-card">
+                            <div class="stat-label">STATUS</div>
+                            <div class="stat-value">${statusEmoji}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">BTC PRICE</div>
+                            <div class="stat-value">$${pos.btc_price ? pos.btc_price.toLocaleString() : 'N/A'}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">TIME LEFT</div>
+                            <div class="stat-value">${minutes}:${seconds.toString().padStart(2, '0')}</div>
+                        </div>
+                    </div>
+                    <div style="padding: 0 1rem 1rem; text-align: center; color: var(--text-secondary); font-size: 0.85rem;">
+                        Target: $${pos.target_price ? pos.target_price.toLocaleString() : 'N/A'} | 
+                        Potential Payout: $${pos.potential_payout.toFixed(2)}
+                    </div>
+                `;
+            } catch (err) {
+                console.error('Failed to fetch position:', err);
+            }
+        }
+
+        // Update everything
+        async function updateAll() {
+            await Promise.all([
+                updateAccount(),
+                updateStatus(),
+                updateStats(),
+                updateLivePosition(),
+                updateChart(),
+                updateWalletBalance(),
+                updateTrades()
+            ]);
+            
+            // Update timestamp and current time
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('last-update').textContent = `Updated: ${timeStr}`;
+            
+            // Show current date and time
+            const dateStr = now.toLocaleDateString('en-US', { 
+                weekday: 'short',
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+            });
+            const fullTimeStr = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true 
+            });
+            document.getElementById('current-time').textContent = `${dateStr}, ${fullTimeStr}`;
+        }
+
+        // Start trading on a specific market
+        async function startTrading() {
+            const input = document.getElementById('market-input').value.trim();
+            if (!input) {
+                document.getElementById('market-status').textContent = 'Please enter a market URL or condition ID';
+                return;
+            }
+            
+            document.getElementById('market-status').textContent = 'Starting bot...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/start-trading`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({market: input})
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    document.getElementById('market-status').textContent = `Bot started on: ${data.market}`;
+                    document.querySelector('.start-btn').style.display = 'none';
+                    document.querySelector('.stop-btn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('market-status').textContent = `Error: ${data.error}`;
+                }
+            } catch (err) {
+                document.getElementById('market-status').textContent = `Failed to start: ${err.message}`;
+            }
+        }
+        
+        // Stop trading
+        async function stopTrading() {
+            try {
+                const res = await fetch(`${API_BASE}/stop-trading`, {method: 'POST'});
+                
+                if (res.ok) {
+                    document.getElementById('market-status').textContent = 'Bot stopped';
+                    document.querySelector('.start-btn').style.display = 'inline-block';
+                    document.querySelector('.stop-btn').style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Failed to stop:', err);
+            }
+        }
+
+        // Initialize
+        updateAll();
+        updateInterval = setInterval(updateAll, 3000); // Refresh every 3 seconds
+    </script>
+</body>
+</html>

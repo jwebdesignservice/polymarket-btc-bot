@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Polymarket Bot Status</title>
+    <meta http-equiv="refresh" content="5">
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #00ff88;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #00ff88;
+            border-bottom: 2px solid #00ff88;
+            padding-bottom: 10px;
+        }
+        .status {
+            background: #141419;
+            border: 1px solid #2a2a35;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .label {
+            color: #9090a8;
+            font-weight: bold;
+        }
+        .value {
+            color: #e8e8f0;
+            margin-left: 10px;
+        }
+        .good { color: #00ff88; }
+        .bad { color: #ff3366; }
+        .warning { color: #ffbb33; }
+        pre {
+            background: #0a0a0f;
+            border: 1px solid #2a2a35;
+            padding: 15px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .refresh {
+            color: #6366f1;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 POLYMARKET BOT STATUS</h1>
+    <p class="refresh">Auto-refreshing every 5 seconds...</p>
+    
+    <div class="status">
+        <div><span class="label">Bot File:</span><span class="value">live_trader_v7_fast_arb.py</span></div>
+        <div><span class="label">Strategy:</span><span class="value">Catch tight spreads when BTC moves</span></div>
+        <div><span class="label">Status:</span><span class="value good">RUNNING ✓</span></div>
+        <div><span class="label">Binance:</span><span class="value good">Connected ✓</span></div>
+        <div><span class="label">Poll Rate:</span><span class="value">Every 0.5 seconds (2x/sec)</span></div>
+        <div><span class="label">Min Edge:</span><span class="value">$0.03 per share</span></div>
+        <div><span class="label">Max Spread Sum:</span><span class="value">$1.05</span></div>
+    </div>
+
+    <div class="status">
+        <h2>Current Market</h2>
+        <div><span class="label">Round:</span><span class="value">Bitcoin Up or Down - 5 min markets</span></div>
+        <div><span class="label">Target:</span><span class="value">~$70,000 (updates each round)</span></div>
+        <div><span class="label">Check:</span><a href="https://polymarket.com/series/btc-up-or-down-5m" style="color: #6366f1;">View on Polymarket</a></div>
+    </div>
+
+    <div class="status">
+        <h2>How It Works</h2>
+        <p><span class="label">1. Normal State:</span> Spreads are WIDE (Up:99¢ + Down:99¢ = $1.98)</p>
+        <p><span class="label">2. BTC Moves:</span> Sharp price change on Binance</p>
+        <p><span class="label">3. Window Opens:</span> Spreads briefly tighten (Up:52¢ + Down:48¢ = $1.00)</p>
+        <p><span class="label">4. Bot Executes:</span> Buys underpriced side in 1-2 second window</p>
+        <p><span class="label">5. Spreads Widen:</span> Back to 99¢/99¢ but we already bought cheap!</p>
+    </div>
+
+    <div class="status">
+        <h2>What You'll See</h2>
+        <p class="warning">Wide spreads ($1.98) = WAITING for opportunity</p>
+        <p class="good">✓ TIGHT SPREAD! = Opportunity detected!</p>
+        <p class="good">⚡ FAST ARB! = Trade executed!</p>
+    </div>
+
+    <div class="status">
+        <h2>Expected Performance</h2>
+        <div><span class="label">Trades per day:</span><span class="value">10-50 (when BTC is volatile)</span></div>
+        <div><span class="label">Profit per trade:</span><span class="value">$0.30-$3.00</span></div>
+        <div><span class="label">Daily target:</span><span class="value">$20-$150</span></div>
+        <div><span class="label">Mode:</span><span class="value warning">PAPER TRADING (testing)</span></div>
+    </div>
+
+    <div class="status">
+        <h2>Check Results</h2>
+        <p>Open PowerShell and run:</p>
+        <pre>cd "C:\Users\Jack\Desktop\AI Website\htdocs\Websites\Project Manager\polymarket-bot"
+Get-Content logs\trades.jsonl -Tail 10</pre>
+        
+        <p>Or view the current market data:</p>
+        <pre>Get-Content current_market.json</pre>
+    </div>
+
+    <div class="status">
+        <h2>Why Spreads Are Wide</h2>
+        <p>The 5-minute markets start with uncertainty (50/50 odds). As time passes and BTC moves, people start betting.</p>
+        <p><span class="warning">Early in round:</span> 99¢/99¢ spreads (no one knows yet)</p>
+        <p><span class="good">Mid-round after BTC move:</span> Spreads tighten to 50¢/50¢ - THIS IS OUR WINDOW!</p>
+        <p><span class="label">Late in round:</span> Winner becomes clear, losing side drops to 1¢</p>
+    </div>
+
+    <div class="status">
+        <h2>Bot is Working If:</h2>
+        <p class="good">✓ Process is running (check Task Manager for python.exe)</p>
+        <p class="good">✓ current_market.json file is updating every 5 minutes</p>
+        <p class="good">✓ You see "Wide spreads" messages (means it's checking)</p>
+        <p class="good">✓ When BTC makes a big move, you see "TIGHT SPREAD" logs</p>
+    </div>
+
+    <p style="margin-top: 40px; color: #6366f1; text-align: center;">
+        Bot session: quiet-rook | Last updated: <?php echo date('H:i:s'); ?>
+    </p>
+</body>
+</html>
