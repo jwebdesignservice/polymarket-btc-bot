@@ -1,0 +1,92 @@
+{
+  "updated": "2026-02-15T15:23:20.914807",
+  "stats": {
+    "wins": 14,
+    "losses": 9,
+    "total_profit": 35.8,
+    "rounds_traded": 23,
+    "current_streak": 2,
+    "starting_balance": 100.0,
+    "overall_balance": 135.8
+  },
+  "position": {
+    "has_position": true,
+    "side": "UP",
+    "shares": 2,
+    "cost": 1.4,
+    "entry_price": 0.7,
+    "target_price": 69016.24
+  },
+  "trades": [
+    {
+      "time": "03:19 PM",
+      "side": "DOWN",
+      "invested": 1.4,
+      "profit": 0.6,
+      "won": true
+    },
+    {
+      "time": "03:14 PM",
+      "side": "DOWN",
+      "invested": 10.5,
+      "profit": 4.5,
+      "won": true
+    },
+    {
+      "time": "02:29 PM",
+      "side": "UP",
+      "invested": 1.0,
+      "profit": -1.0,
+      "won": false
+    },
+    {
+      "time": "02:24 PM",
+      "side": "DOWN",
+      "invested": 1.0,
+      "profit": -1.0,
+      "won": false
+    },
+    {
+      "time": "02:19 PM",
+      "side": "DOWN",
+      "invested": 1.0,
+      "profit": -1.0,
+      "won": false
+    },
+    {
+      "time": "02:14 PM",
+      "side": "DOWN",
+      "invested": 1.0,
+      "profit": 1.0,
+      "won": true
+    },
+    {
+      "time": "02:09 PM",
+      "side": "DOWN",
+      "invested": 7.5,
+      "profit": 7.5,
+      "won": true
+    },
+    {
+      "time": "01:52 PM",
+      "side": "DOWN",
+      "invested": 1.0,
+      "profit": 1.0,
+      "won": true
+    },
+    {
+      "time": "01:47 PM",
+      "side": "DOWN",
+      "invested": 1.0,
+      "profit": -1.0,
+      "won": false
+    },
+    {
+      "time": "01:42 PM",
+      "side": "DOWN",
+      "invested": 1.0,
+      "profit": -1.0,
+      "won": false
+    }
+  ]
+}

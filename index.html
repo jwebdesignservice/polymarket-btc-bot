@@ -354,37 +354,20 @@
     </div>
     
     <script>
-        // Demo data for public view
-        const demoData = {
-            stats: {
-                starting_balance: 100.00,
-                total_profit: 15.50,
-                wins: 8,
-                losses: 3,
-                rounds_traded: 11,
-                current_streak: 2
-            },
-            position: {
-                has_position: true,
-                side: "UP",
-                shares: 15,
-                cost: 7.50,
-                live_pnl: 4.20,
-                winning: true,
-                time_remaining: 180,
-                up_probability: 68
-            },
-            trades: [
-                { time: "2:15 PM", side: "UP", invested: 7.50, profit: 7.50, won: true },
-                { time: "2:10 PM", side: "DOWN", invested: 5.00, profit: -5.00, won: false },
-                { time: "2:05 PM", side: "UP", invested: 7.50, profit: 7.50, won: true },
-                { time: "2:00 PM", side: "DOWN", invested: 7.50, profit: 7.50, won: true },
-                { time: "1:55 PM", side: "UP", invested: 3.00, profit: -3.00, won: false },
-            ]
-        };
-        
-        // Initialize chart
+        // Live data from JSON file
+        let liveData = null;
         let probChart;
+        let chartData = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50];
+        
+        async function fetchData() {
+            try {
+                const response = await fetch('data.json?' + Date.now());
+                liveData = await response.json();
+                updateDisplay();
+            } catch (e) {
+                console.log('Could not fetch live data, using cached');
+            }
+        }
         
         function initChart() {
             const ctx = document.getElementById('prob-chart').getContext('2d');
@@ -393,7 +376,7 @@
                 data: {
                     labels: ['', '', '', '', '', '', '', '', '', ''],
                     datasets: [{
-                        data: [50, 52, 55, 58, 62, 65, 63, 68, 70, 68],
+                        data: chartData,
                         borderColor: '#60a5fa',
                         backgroundColor: 'rgba(96, 165, 250, 0.1)',
                         borderWidth: 2,
@@ -424,10 +407,12 @@
         }
         
         function updateDisplay() {
-            const { stats, position, trades } = demoData;
+            if (!liveData) return;
+            
+            const { stats, position, trades } = liveData;
             
             // Update overall balance
-            const balance = stats.starting_balance + stats.total_profit;
+            const balance = stats.overall_balance || (stats.starting_balance + stats.total_profit);
             document.getElementById('overall-balance').textContent = `$${balance.toFixed(2)}`;
             document.getElementById('overall-balance').className = `stat-value ${balance >= stats.starting_balance ? 'positive' : 'negative'}`;
             
@@ -442,68 +427,60 @@
             document.getElementById('streak').textContent = stats.current_streak > 0 ? `+${stats.current_streak}` : stats.current_streak;
             
             // Update position
-            if (position.has_position) {
+            if (position && position.has_position) {
                 document.getElementById('pos-side').textContent = position.side;
                 document.getElementById('pos-side').className = `position-value ${position.side === 'UP' ? 'side-up' : 'side-down'}`;
                 document.getElementById('pos-shares').textContent = position.shares;
                 document.getElementById('pos-cost').textContent = `$${position.cost.toFixed(2)}`;
-                document.getElementById('pos-pnl').textContent = `${position.live_pnl >= 0 ? '+' : ''}$${position.live_pnl.toFixed(2)}`;
-                document.getElementById('pos-pnl').className = `position-value ${position.live_pnl >= 0 ? 'positive' : 'negative'}`;
-                document.getElementById('pos-status').textContent = position.winning ? '📈 Winning' : '📉 Losing';
                 
-                const mins = Math.floor(position.time_remaining / 60);
-                const secs = position.time_remaining % 60;
-                document.getElementById('pos-time').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                // Position P&L (estimated)
+                const estPnl = position.side === 'UP' ? 
+                    (position.shares - position.cost) : 
+                    (position.shares - position.cost);
+                document.getElementById('pos-pnl').textContent = `~$${Math.abs(estPnl).toFixed(2)}`;
+                document.getElementById('pos-pnl').className = `position-value`;
+                document.getElementById('pos-status').textContent = '⏳ Pending';
+                document.getElementById('pos-time').textContent = '--:--';
                 
-                document.getElementById('chart-prob').textContent = `${position.up_probability}%`;
+                // Update chart probability (estimate based on side)
+                const prob = position.side === 'UP' ? 55 : 45;
+                document.getElementById('chart-prob').textContent = `${prob}%`;
+            } else {
+                document.getElementById('pos-side').textContent = '-';
+                document.getElementById('pos-shares').textContent = '0';
+                document.getElementById('pos-cost').textContent = '$0.00';
+                document.getElementById('pos-pnl').textContent = '$0.00';
+                document.getElementById('pos-status').textContent = 'No position';
+                document.getElementById('pos-time').textContent = '--:--';
             }
             
             // Update trades
-            const tbody = document.getElementById('trades-body');
-            tbody.innerHTML = trades.map(t => `
-                <tr>
-                    <td>${t.time}</td>
-                    <td class="${t.side === 'UP' ? 'side-up' : 'side-down'}">${t.side}</td>
-                    <td>$${t.invested.toFixed(2)}</td>
-                    <td class="${t.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${t.profit >= 0 ? '+' : ''}$${t.profit.toFixed(2)}</td>
-                    <td class="${t.won ? 'result-won' : 'result-lost'}">${t.won ? '✅ Won' : '❌ Lost'}</td>
-                </tr>
-            `).join('');
-        }
-        
-        // Simulate live updates
-        function simulateUpdates() {
-            // Randomly adjust probability
-            const newProb = Math.min(99, Math.max(1, demoData.position.up_probability + (Math.random() - 0.5) * 10));
-            demoData.position.up_probability = Math.round(newProb);
-            
-            // Update time
-            demoData.position.time_remaining = Math.max(0, demoData.position.time_remaining - 5);
-            if (demoData.position.time_remaining === 0) {
-                demoData.position.time_remaining = 300;
+            if (trades && trades.length > 0) {
+                const tbody = document.getElementById('trades-body');
+                tbody.innerHTML = trades.map(t => `
+                    <tr>
+                        <td>${t.time}</td>
+                        <td class="${t.side === 'UP' ? 'side-up' : 'side-down'}">${t.side}</td>
+                        <td>$${t.invested.toFixed(2)}</td>
+                        <td class="${t.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${t.profit >= 0 ? '+' : ''}$${t.profit.toFixed(2)}</td>
+                        <td class="${t.won ? 'result-won' : 'result-lost'}">${t.won ? '✅ Won' : '❌ Lost'}</td>
+                    </tr>
+                `).join('');
             }
             
-            // Update P&L based on probability
-            demoData.position.winning = newProb > 50;
-            demoData.position.live_pnl = demoData.position.winning ? 
-                (demoData.position.shares - demoData.position.cost) : 
-                -demoData.position.cost;
-            
-            // Update chart
-            if (probChart) {
-                probChart.data.datasets[0].data.shift();
-                probChart.data.datasets[0].data.push(newProb);
-                probChart.update('none');
+            // Update last updated time
+            if (liveData.updated) {
+                const updated = new Date(liveData.updated);
+                document.getElementById('status-text').textContent = `Updated ${updated.toLocaleTimeString()}`;
             }
-            
-            updateDisplay();
         }
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             initChart();
-            updateDisplay();
-            setInterval(simulateUpdates, 5000);
+            fetchData();
+            // Refresh data every 30 seconds
+            setInterval(fetchData, 30000);
         });
     </script>
 </body>
