@@ -24,20 +24,63 @@ import websockets
 import aiohttp
 import json
 import os
+import sys
 import time
 import logging
 import math
 from datetime import datetime
 from playwright.async_api import async_playwright
 from collections import deque
+from generate_report import generate_report
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Configuration
-BASE_SHARES = 10
-MIN_SHARES = 2
-MAX_SHARES = 15
+# ============================================================
+# SINGLE INSTANCE LOCK - Prevent duplicate bot instances
+# ============================================================
+LOCK_FILE = "logs/bot.lock"
+
+def acquire_lock():
+    """Acquire single-instance lock. Exit if another instance is running."""
+    os.makedirs("logs", exist_ok=True)
+    try:
+        # Windows-compatible lock using a PID file
+        if os.path.exists(LOCK_FILE):
+            with open(LOCK_FILE, 'r') as f:
+                old_pid = f.read().strip()
+            # Check if old process is still running
+            try:
+                old_pid = int(old_pid)
+                os.kill(old_pid, 0)  # Check if process exists
+                logger.error(f"Another bot instance is already running (PID: {old_pid}). Exiting.")
+                sys.exit(1)
+            except (ProcessLookupError, ValueError, OSError):
+                # Old process is dead, we can take over
+                pass
+        
+        # Write our PID
+        with open(LOCK_FILE, 'w') as f:
+            f.write(str(os.getpid()))
+        logger.info(f"Lock acquired (PID: {os.getpid()})")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to acquire lock: {e}")
+        return False
+
+def release_lock():
+    """Release the lock file on exit."""
+    try:
+        if os.path.exists(LOCK_FILE):
+            os.remove(LOCK_FILE)
+            logger.info("Lock released")
+    except Exception as e:
+        logger.warning(f"Failed to release lock: {e}")
+
+# Configuration - TEST: MIN_SHARES=10 (no small positions)
+BASE_SHARES = 10   # Medium confidence
+MIN_SHARES = 10    # TEST: Eliminate small positions (was 2)
+MAX_SHARES = 15    # High confidence = large positions
 ENTRY_DELAY = 20  # Wait 20s into round before entering
 ENTRY_WINDOW = 90  # Must enter within first 90 seconds
 MOMENTUM_THRESHOLD = 30  # $30 move = clear direction
@@ -213,27 +256,49 @@ class MomentumBot:
             pass
         
     async def connect_binance(self):
-        """Connect to Binance WebSocket for real-time BTC price"""
-        logger.info("Connecting to Binance...")
+        """Connect to Binance WebSocket for real-time BTC price with robust retry logic"""
+        retry_count = 0
+        max_retries = 100  # Essentially unlimited retries
+        base_delay = 2
+        max_delay = 30
         
-        try:
-            async with websockets.connect(BINANCE_WS) as ws:
-                logger.info("✓ Binance connected")
+        while retry_count < max_retries:
+            try:
+                logger.info(f"Connecting to Binance... (attempt {retry_count + 1})")
                 
-                async for message in ws:
-                    data = json.loads(message)
-                    price = float(data['p'])
-                    self.btc_price = price
+                # Connection with timeout
+                async with websockets.connect(
+                    BINANCE_WS,
+                    ping_interval=20,
+                    ping_timeout=10,
+                    close_timeout=5,
+                    open_timeout=15
+                ) as ws:
+                    logger.info("✓ Binance connected")
+                    retry_count = 0  # Reset on successful connection
                     
-                    # Store price history
-                    now = time.time()
-                    self.price_history.append(price)
-                    self.price_timestamps.append(now)
+                    async for message in ws:
+                        data = json.loads(message)
+                        price = float(data['p'])
+                        self.btc_price = price
                         
-        except Exception as e:
-            logger.error(f"Binance error: {e}")
-            await asyncio.sleep(5)
-            await self.connect_binance()
+                        # Store price history
+                        now = time.time()
+                        self.price_history.append(price)
+                        self.price_timestamps.append(now)
+                            
+            except asyncio.TimeoutError:
+                logger.warning("Binance connection timed out")
+            except websockets.exceptions.ConnectionClosed as e:
+                logger.warning(f"Binance connection closed: {e}")
+            except Exception as e:
+                logger.error(f"Binance error: {e}")
+            
+            # Exponential backoff with cap
+            retry_count += 1
+            delay = min(base_delay * (2 ** min(retry_count, 5)), max_delay)
+            logger.info(f"Reconnecting in {delay}s...")
+            await asyncio.sleep(delay)
     
     def calculate_momentum(self):
         """Calculate momentum signals from price history"""
@@ -330,11 +395,11 @@ class MomentumBot:
         strength = momentum['strength']
         
         if confidence >= 0.75 and strength >= STRONG_MOMENTUM:
-            return MAX_SHARES  # High confidence
+            return MAX_SHARES  # High confidence = 15 shares
         elif confidence >= 0.5 and strength >= MOMENTUM_THRESHOLD:
-            return BASE_SHARES  # Medium confidence
+            return BASE_SHARES  # Medium confidence = 10 shares
         else:
-            return MIN_SHARES  # Low confidence, but still trade
+            return 0  # Low confidence = SKIP TRADE (don't lose money on weak signals)
     
     async def discover_market(self):
         """Discover the current 5-minute market"""
@@ -576,6 +641,17 @@ class MomentumBot:
         
         with open('logs/trades.jsonl', 'a') as f:
             f.write(json.dumps(trade_data) + '\n')
+        
+        # Update live report after each trade
+        try:
+            generate_report()
+        except Exception as e:
+            logger.warning(f"Report generation failed: {e}")
+        
+        # CRITICAL: Reset position to prevent duplicate logging
+        self.position['has_entered'] = False
+        self.position['side'] = None
+        self.position['shares'] = 0
     
     async def monitor(self):
         """Main trading loop"""
@@ -645,17 +721,18 @@ class MomentumBot:
                                 logger.info(f"Momentum: {direction} | Confidence: {confidence:.1%} | "
                                            f"Signals: {momentum['up_votes']}↑ {momentum['down_votes']}↓")
                                 
-                                await self.enter_position(direction, shares, entry_price)
+                                if shares == 0:
+                                    logger.info(f"⏭️ SKIPPING - Low confidence, waiting for better setup")
+                                else:
+                                    await self.enter_position(direction, shares, entry_price)
                             else:
                                 logger.warning(f"[{time_left:.0f}s] No ask price available")
                         else:
                             logger.warning(f"[{time_left:.0f}s] Failed to fetch orderbook")
                     
                     else:
-                        # Missed entry window - force entry with DOWN (our edge)
-                        logger.warning("Entry window closing - forcing DOWN entry")
-                        direction = 'DOWN'  # DOWN has 77% win rate
-                        await self.enter_position(direction, MIN_SHARES, 0.50)
+                        # Missed entry window - skip instead of forcing low confidence trade
+                        logger.info("⏭️ Entry window closing - no high confidence signal, skipping round")
                 
                 # HOLDING PHASE: Monitor position
                 else:
@@ -711,9 +788,25 @@ class MomentumBot:
 
 
 async def main():
-    bot = MomentumBot()
-    await bot.run()
+    # Acquire single-instance lock
+    if not acquire_lock():
+        logger.error("Failed to acquire lock. Exiting.")
+        return
+    
+    try:
+        bot = MomentumBot()
+        await bot.run()
+    finally:
+        release_lock()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+        release_lock()
+    except Exception as e:
+        logger.error(f"Bot crashed: {e}")
+        release_lock()
+        raise

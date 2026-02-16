@@ -52,7 +52,7 @@
                     <div class="auto-settings">
                         <div class="setting-item">
                             <span class="setting-label">Strategy:</span>
-                            <span class="setting-value" id="strategy-display">Hedge Strategy (buy both, sell loser)</span>
+                            <span class="setting-value" id="strategy-display">v9.5 Momentum Directional (MIN_SHARES=10)</span>
                         </div>
                         <div class="setting-item">
                             <span class="setting-label">Position Size:</span>
@@ -110,25 +110,28 @@
             </div>
         </section>
 
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">TOTAL P&L</div>
-                <div class="stat-value pnl" id="total-pnl">$0.00</div>
+        <!-- v9.5 Session Stats -->
+        <section class="section">
+            <h2>📊 V9.5 TEST SESSION</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">TOTAL P&L</div>
+                    <div class="stat-value pnl" id="total-pnl">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">WIN RATE</div>
+                    <div class="stat-value" id="win-rate">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">TRADES</div>
+                    <div class="stat-value" id="total-trades">0 / 100</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">AVG PROFIT</div>
+                    <div class="stat-value" id="avg-profit">$0.00</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">WIN RATE</div>
-                <div class="stat-value" id="win-rate">0%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">TRADES</div>
-                <div class="stat-value" id="total-trades">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">AVG PROFIT</div>
-                <div class="stat-value" id="avg-profit">$0.00</div>
-            </div>
-        </div>
+        </section>
 
         <!-- Live Position -->
         <section class="section" id="live-position-section">
@@ -369,7 +372,7 @@
                 
                 document.getElementById('total-pnl').textContent = formatMoney(data.total_pnl || 0);
                 document.getElementById('win-rate').textContent = `${(data.win_rate * 100).toFixed(1)}%`;
-                document.getElementById('total-trades').textContent = data.total_trades || 0;
+                document.getElementById('total-trades').textContent = `${data.total_trades || 0} / 100`;
                 document.getElementById('avg-profit').textContent = formatMoney(data.avg_profit || 0);
                 
                 const pnlEl = document.getElementById('total-pnl');

@@ -30,6 +30,14 @@ import live_trader
 app = Flask(__name__)
 CORS(app)
 
+@app.after_request
+def add_header(response):
+    """Prevent caching of API responses"""
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 # Point to the main bot directory
 BOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOGS_DIR = os.path.join(BOT_DIR, "logs")
@@ -77,16 +85,33 @@ def read_state():
 
 
 def read_trades():
-    """Read trade history from logs."""
+    """Read trade history from logs - v9.5 session, TRUE deduplicated."""
     trades_file = os.path.join(LOGS_DIR, "trades.jsonl")
     if not os.path.exists(trades_file):
         return []
     
-    trades = []
+    # v9.5 2-hour test start: Feb 16, 2026 06:28 UTC
+    SESSION_START = 1771223280
+    
+    all_trades = []
     with open(trades_file, encoding="utf-8") as f:
         for line in f:
             if line.strip():
-                trades.append(json.loads(line))
+                t = json.loads(line)
+                ts = t.get("timestamp", 0)
+                if ts >= SESSION_START:
+                    all_trades.append(t)
+    
+    # Deduplicate CLOSE trades by minute (keep first per minute)
+    seen_minutes = {}
+    trades = []
+    for t in all_trades:
+        if t.get("action") == "CLOSE":
+            minute_key = int(t.get("timestamp", 0) // 60)
+            if minute_key in seen_minutes:
+                continue  # Skip duplicate
+            seen_minutes[minute_key] = True
+        trades.append(t)
     
     # Return most recent first
     return sorted(trades, key=lambda t: t.get("timestamp", 0), reverse=True)
